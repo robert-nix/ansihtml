@@ -264,3 +264,21 @@ func TestParseEmptyWriter(t *testing.T) {
 		assert.Contains(t, err.Error(), errorWriterErr)
 	}
 }
+
+type errorReader struct{}
+
+const errorReaderErr = "cannot read from errorReader"
+
+func (r *errorReader) Read(b []byte) (int, error) {
+	return 0, errors.New(errorReaderErr)
+}
+
+func TestParseErrorReader(t *testing.T) {
+	rd := errorReader{}
+	w := strings.Builder{}
+	p := ansihtml.NewParser(&rd, &w)
+	err := p.Parse(nil)
+	if assert.Error(t, err) {
+		assert.Contains(t, err.Error(), errorReaderErr)
+	}
+}
