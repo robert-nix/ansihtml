@@ -87,7 +87,14 @@ func TestParser(t *testing.T) {
 					parameterBytes:    []byte("0;33m"),
 				},
 			},
-			bufferSize: 6,
+			bufferSize: 5,
+		},
+		{
+			desc:       "unicode almost escape split across buffer boundary",
+			input:      "test\u00a00;33m",
+			output:     "test\u00a00;33m",
+			escapes:    nil,
+			bufferSize: 5,
 		},
 		{
 			desc:   "multiple escapes",

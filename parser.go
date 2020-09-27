@@ -10,8 +10,6 @@ type Parser struct {
 	in  io.Reader
 	out io.Writer
 
-	parseEscapeHandler func(finalByte byte, intermediateBytes, parameterBytes []byte)
-
 	parserState
 }
 
@@ -20,12 +18,6 @@ type Parser struct {
 func NewParser(rd io.Reader, w io.Writer) *Parser {
 	p := &Parser{in: rd, out: w}
 	p.utf8Escapes = true
-	p.escapeHandler = func(finalByte byte, intermediateBytes, parameterBytes []byte) {
-		p.escapeFlag = true
-		if p.parseEscapeHandler != nil {
-			p.parseEscapeHandler(finalByte, intermediateBytes, parameterBytes)
-		}
-	}
 	return p
 }
 
@@ -59,21 +51,22 @@ func (p *Parser) ParseBuffer(buf []byte, escapeHandler func(finalByte byte, inte
 
 	p.escapeHandler = escapeHandler
 	for {
-		// index 1 into the read in case
-		// the buffer has split in the middle
-		// of a utf8 sequence like 0xc2 0xa0
-		n, err := p.in.Read(buf[1:])
-		start := 1
-		var ofs int
+		n, err := p.in.Read(buf)
+		var start, ofs int
 		var werr error
-		for i := 1; i <= n; i++ {
+		for i := 0; i < n; i++ {
 			if !p.handle(buf[i]) {
 				ofs++
 			} else {
 				if p.extraByte != 0 {
 					if ofs == 0 {
-						buf[0] = p.extraByte
-						start = 0
+						// there's not room in the buffer to put the last byte,
+						// so write the single byte.
+						var wbuf [1]byte
+						wbuf[0] = p.extraByte
+						if werr == nil {
+							_, werr = p.out.Write(wbuf[:])
+						}
 					} else {
 						buf[i-ofs] = p.extraByte
 						ofs--
@@ -93,7 +86,7 @@ func (p *Parser) ParseBuffer(buf []byte, escapeHandler func(finalByte byte, inte
 			}
 		}
 		if start <= n-ofs && werr == nil {
-			_, werr = p.out.Write(buf[start : n-ofs+1])
+			_, werr = p.out.Write(buf[start : n-ofs])
 		}
 		if werr != nil {
 			return werr
@@ -183,6 +176,7 @@ func (s *parserState) handle(b byte) bool {
 			}
 
 			s.extraByte = previousByte
+			s.state = readNormal
 			return true
 		}
 		// intermediate or final byte
