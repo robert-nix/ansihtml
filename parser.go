@@ -212,7 +212,7 @@ func (s *parserState) handle(b byte) bool {
 		}
 		switch finalByte {
 		case '[': // CSI
-			if s.paramsBufI == 0 || (previousByte >= 0x30 && previousByte <= 0x3f) {
+			if s.paramsBufI == 1 || (previousByte >= 0x30 && previousByte <= 0x3f) {
 				if !(b >= 0x20 && b <= 0x7e) {
 					// invalid parameters
 					s.state = readNormal
