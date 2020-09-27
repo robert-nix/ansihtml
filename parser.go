@@ -154,7 +154,7 @@ func (s *parserState) handle(b byte) bool {
 	previousByte := s.previousByte
 	s.previousByte = b
 	switch s.state {
-	case readNormal:
+	default: // readNormal
 		if b == escape || (s.utf8Escapes && b == 0xc2) {
 			s.state = readEscape
 			return false
@@ -231,7 +231,7 @@ func (s *parserState) handle(b byte) bool {
 				s.handleEscape()
 				s.state = readNormal
 			}
-		case 'P', 'X', '^', '_', ']': // ST-terminated
+		default: // ST-terminated
 			if (previousByte == escape && b == '\\') ||
 				(s.utf8Escapes && previousByte == 0xc2 && b == 0x9c) ||
 				// if an ST-terminated sequence is too long, just truncate it
@@ -243,17 +243,9 @@ func (s *parserState) handle(b byte) bool {
 				s.state = readNormal
 				s.seqBufI = 0
 			}
-		default: // should be unreachable if hasParams matches this switch
-			s.handleEscape()
-			s.state = readNormal
-			s.seqBufI = 0
-			return true
 		}
 		return false
 	}
-
-	// unreachable
-	return true
 }
 
 func (s *parserState) hasParams(b byte) bool {

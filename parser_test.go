@@ -1,6 +1,7 @@
 package ansihtml_test
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -192,7 +193,7 @@ func TestParser(t *testing.T) {
 		},
 		{
 			desc:    "invalid CSI second byte",
-			input:   "test\x1b[0\x7ftest",
+			input:   "test\x1b[0 \x7ftest",
 			output:  "testtest",
 			escapes: nil,
 		},
@@ -242,6 +243,24 @@ func TestParseBuffer(t *testing.T) {
 	p := ansihtml.NewParser(nil, nil)
 	err := p.ParseBuffer(nil, nil)
 	if assert.Error(t, err) {
-		assert.Contains(t, "buffer must not be empty", err.Error())
+		assert.Contains(t, err.Error(), "buffer must not be empty")
+	}
+}
+
+type errorWriter struct{}
+
+const errorWriterErr = "cannot write to errorWriter"
+
+func (w *errorWriter) Write(b []byte) (int, error) {
+	return 0, errors.New(errorWriterErr)
+}
+
+func TestParseEmptyWriter(t *testing.T) {
+	rd := strings.NewReader("this is \x1b[0;33myellow\x1b[m")
+	var w errorWriter
+	p := ansihtml.NewParser(rd, &w)
+	err := p.Parse(nil)
+	if assert.Error(t, err) {
+		assert.Contains(t, err.Error(), errorWriterErr)
 	}
 }
