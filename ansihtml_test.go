@@ -101,6 +101,11 @@ func TestConvertToHTML(t *testing.T) {
 			input:  "\x1b[30;48;2;9999999999;9999999999;9999999999mThis is black on white",
 			output: `<span style="color:black;background-color:rgb(255,255,255);">This is black on white</span>`,
 		},
+		{
+			desc:   "noops",
+			input:  "\x1bc\x1b[2J\x1b[?1m\x1b[38;1mtest",
+			output: `test`,
+		},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {

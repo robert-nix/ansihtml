@@ -77,7 +77,7 @@ func (s *sgrColorState) handleParam(param int) bool {
 			s.expectParams = colorParamStateNeed256ColorParam
 		default:
 			s.expectParams = 0
-			return false
+			return true
 		}
 	case colorParamStateNeed256ColorParam:
 		s.index = uint8(param & 255)
