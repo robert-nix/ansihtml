@@ -27,6 +27,8 @@ type htmlWriter struct {
 
 	superscript, subscript bool
 
+	lastParamWasReset bool
+
 	inSpan     bool
 	useClasses bool
 	noStyles   bool
@@ -70,9 +72,9 @@ func (s *sgrColorState) handleParam(param int) bool {
 	case colorParamStateNeedFirstParam:
 		switch param {
 		case 2:
-			s.expectParams = colorParamStateNeed256ColorParam
-		case 5:
 			s.expectParams = colorParamStateNeedRValue
+		case 5:
+			s.expectParams = colorParamStateNeed256ColorParam
 		default:
 			s.expectParams = 0
 			return false
@@ -186,7 +188,7 @@ func (w *htmlWriter) handleEscape(finalByte byte, intermediateBytes, parameterBy
 		return err
 	}
 
-	if param == 0 {
+	if w.lastParamWasReset {
 		return nil
 	}
 
@@ -427,6 +429,7 @@ const (
 )
 
 func (w *htmlWriter) applyEffect(effect int) {
+	w.lastParamWasReset = false
 	if w.fgColor.handleParam(effect) {
 		return
 	}
@@ -458,6 +461,7 @@ func (w *htmlWriter) applyEffect(effect int) {
 	}
 	switch effect {
 	case sgrEffectReset:
+		w.lastParamWasReset = true
 		w.bold = false
 		w.faint = false
 		w.italic = false
