@@ -56,6 +56,9 @@ func (p *Parser) ParseBuffer(buf []byte, escapeHandler func(finalByte byte, inte
 			_, werr = p.out.Write(buf[start : i-ofs])
 		}
 		start = i - ofs
+		if escapeHandler == nil {
+			return nil
+		}
 		return escapeHandler(finalByte, intermediateBytes, parameterBytes)
 	}
 
