@@ -81,7 +81,7 @@ func TestConvertToHTML(t *testing.T) {
 			input:      "\x1b[47;30mBlack on white\x1b[97;40mWhite on black",
 			useClasses: true,
 			output: `<span class="fg-black bg-white">Black on white</span>` +
-				`<span class="fg-black bg-black">White on black</span>`,
+				`<span class="fg-bright-white bg-black">White on black</span>`,
 		},
 		{
 			desc:  "superscript and subscript",
@@ -105,6 +105,12 @@ func TestConvertToHTML(t *testing.T) {
 			desc:   "noops",
 			input:  "\x1bc\x1b[2J\x1b[?1m\x1b[38;1mtest",
 			output: `test`,
+		},
+		{
+			desc:       "resets",
+			input:      "\x1b[1;3;4;5;7;8;9;31;47;26;52;53;58;5;2mtest\x1b[59;55;54;50;49;39;29;28;27;25;24;23;22mtest",
+			useClasses: true,
+			output:     `<span class="bold italic underline strikethrough overline slow-blink invert hide proportional fg-red bg-white underline-green">test</span>test`,
 		},
 	}
 	for _, tC := range testCases {

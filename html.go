@@ -453,11 +453,11 @@ func (w *htmlWriter) applyEffect(effect int) {
 		w.bgColor.changed = true
 		w.bgColor.is24Bit = false
 		w.bgColor.index = uint8(effect - sgrEffectBackgroundColor)
-	case effect >= sgrEffectForegroundColorBright && effect < sgrEffectForegroundColorBrightMax:
+	case effect >= sgrEffectForegroundColorBright && effect <= sgrEffectForegroundColorBrightMax:
 		w.fgColor.changed = true
 		w.fgColor.is24Bit = false
 		w.fgColor.index = 8 + uint8(effect-sgrEffectForegroundColorBright)
-	case effect >= sgrEffectBackgroundColorBright && effect < sgrEffectBackgroundColorBrightMax:
+	case effect >= sgrEffectBackgroundColorBright && effect <= sgrEffectBackgroundColorBrightMax:
 		w.bgColor.changed = true
 		w.bgColor.is24Bit = false
 		w.bgColor.index = 8 + uint8(effect-sgrEffectBackgroundColorBright)
