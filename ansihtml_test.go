@@ -96,6 +96,11 @@ func TestConvertToHTML(t *testing.T) {
 			output: `<span class="superscript">Superscript</span>` +
 				`<span class="subscript">Subscript</span>`,
 		},
+		{
+			desc:   "integer overflow saturates",
+			input:  "\x1b[30;48;2;9999999999;9999999999;9999999999mThis is black on white",
+			output: `<span style="color:black;background-color:rgb(255,255,255);">This is black on white</span>`,
+		},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
