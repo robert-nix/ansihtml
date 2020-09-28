@@ -47,17 +47,17 @@ func TestConvertToHTML(t *testing.T) {
 			desc:  "every style",
 			input: "\x1b[1;3;4;5;7;8;9;11;26;38;5;255;51;53;58;2;0;255;0mMany styles\x1b[2;20;21;6;12;38;2;233;277;255mA few more styles",
 			output: `<span style="font-weight:bold;font-style:italic;text-decoration-line:underline line-through overline;` +
-				`filter:invert(100%);opacity:0;color:rgb(238,238,238);text-decoration-color:rgb(0,255,0);">Many styles</span>` +
-				`<span style="font-weight:lighter;text-decoration-line:line-through overline;filter:invert(100%);opacity:0;` +
-				`color:rgb(233,21,255);text-decoration-color:rgb(0,255,0);">A few more styles</span>`,
+				`filter:invert(100%);opacity:0;font-family:sans-serif;color:rgb(238,238,238);text-decoration-color:rgb(0,255,0);">` +
+				`Many styles</span><span style="font-weight:lighter;text-decoration-line:line-through overline;filter:invert(100%);` +
+				`opacity:0;font-family:sans-serif;color:rgb(233,21,255);text-decoration-color:rgb(0,255,0);">A few more styles</span>`,
 		},
 		{
 			desc:       "every class",
 			input:      "\x1b[1;3;4;5;7;8;9;11;26;38;5;255;51;53;58;2;0;255;mMany classes\x1b[2;20;21;6;12;38;2;233;277;255mA few more classes",
 			useClasses: true,
-			output: `<span class="bold italic underline strikethrough overline slow-blink invert hide font-1" style="` +
+			output: `<span class="bold italic underline strikethrough overline slow-blink invert hide font-1 proportional" style="` +
 				`color:rgb(238,238,238);text-decoration-color:rgb(0,255,0);">Many classes</span><span class="faint fraktur ` +
-				`double-underline strikethrough overline fast-blink invert hide font-2" style="color:rgb(233,21,255);` +
+				`double-underline strikethrough overline fast-blink invert hide font-2 proportional" style="color:rgb(233,21,255);` +
 				`text-decoration-color:rgb(0,255,0);">A few more classes</span>`,
 		},
 		{
@@ -65,8 +65,36 @@ func TestConvertToHTML(t *testing.T) {
 			input:      "\x1b[1;3;4;5;7;8;9;11;26;38;5;255;51;53;58;2;0;255;mMany classes\x1b[2;20;21;6;12;38;2;233;277;255mA few more classes",
 			useClasses: true,
 			noStyles:   true,
-			output: `<span class="bold italic underline strikethrough overline slow-blink invert hide font-1">Many classes</span>` +
-				`<span class="faint fraktur double-underline strikethrough overline fast-blink invert hide font-2">A few more classes</span>`,
+			output: `<span class="bold italic underline strikethrough overline slow-blink invert hide font-1 proportional">Many classes` +
+				`</span><span class="faint fraktur double-underline strikethrough overline fast-blink invert hide font-2 proportional">` +
+				`A few more classes</span>`,
+		},
+		{
+			desc:       "background color",
+			input:      "\x1b[48;5;28mGreen background\x1b[102mDifferent green background",
+			useClasses: true,
+			output: `<span style="background-color:rgb(0,135,0);">Green background</span>` +
+				`<span class="bg-bright-green">Different green background</span>`,
+		},
+		{
+			desc:       "more colors",
+			input:      "\x1b[47;30mBlack on white\x1b[97;40mWhite on black",
+			useClasses: true,
+			output: `<span class="fg-black bg-white">Black on white</span>` +
+				`<span class="fg-black bg-black">White on black</span>`,
+		},
+		{
+			desc:  "superscript and subscript",
+			input: "\x1b[73mSuperscript\x1b[74mSubscript",
+			output: `<span style="vertical-align:super;">Superscript</span>` +
+				`<span style="vertical-align:sub;">Subscript</span>`,
+		},
+		{
+			desc:       "superscript and subscript classes",
+			input:      "\x1b[73mSuperscript\x1b[74mSubscript",
+			useClasses: true,
+			output: `<span class="superscript">Superscript</span>` +
+				`<span class="subscript">Subscript</span>`,
 		},
 	}
 	for _, tC := range testCases {

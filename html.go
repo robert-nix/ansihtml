@@ -526,7 +526,7 @@ func (w *htmlWriter) applyEffect(effect int) {
 		w.slowBlink = false
 		w.rapidBlink = false
 	case sgrEffectProportional:
-		w.proportional = false
+		w.proportional = true
 	case sgrEffectNotInvert:
 		w.invert = false
 	case sgrEffectNotHide:
@@ -562,7 +562,9 @@ func (w *htmlWriter) applyEffect(effect int) {
 		w.underlineColor.changed = false
 	case sgrEffectSuperscript:
 		w.superscript = true
+		w.subscript = false
 	case sgrEffectSubscript:
 		w.subscript = true
+		w.superscript = false
 	}
 }
