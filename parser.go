@@ -37,25 +37,39 @@ func NewParser(rd io.Reader, w io.Writer) *Parser {
 //
 // intermediateBytes is rarely present in ANSI escape sequences, with one
 // example being the switching between JIS encodings done by ISO-2022-JP.
-func (p *Parser) Parse(escapeHandler func(finalByte byte, intermediateBytes, parameterBytes []byte)) error {
+func (p *Parser) Parse(escapeHandler func(finalByte byte, intermediateBytes, parameterBytes []byte) error) error {
 	buf := make([]byte, 4096)
 	return p.ParseBuffer(buf, escapeHandler)
 }
 
 // ParseBuffer performs the same action as Parse, but with a caller-supplied
 // buffer for copying data from the reader to the writer.
-func (p *Parser) ParseBuffer(buf []byte, escapeHandler func(finalByte byte, intermediateBytes, parameterBytes []byte)) error {
+func (p *Parser) ParseBuffer(buf []byte, escapeHandler func(finalByte byte, intermediateBytes, parameterBytes []byte) error) error {
 	if len(buf) == 0 {
 		return errors.New("buffer must not be empty")
 	}
 
-	p.escapeHandler = escapeHandler
+	var start, ofs, i int
+	var werr error
+	p.escapeHandler = func(finalByte byte, intermediateBytes, parameterBytes []byte) error {
+		if werr == nil {
+			_, werr = p.out.Write(buf[start : i-ofs])
+		}
+		start = i - ofs
+		return escapeHandler(finalByte, intermediateBytes, parameterBytes)
+	}
+
 	for {
 		n, err := p.in.Read(buf)
-		var start, ofs int
-		var werr error
-		for i := 0; i < n; i++ {
-			if !p.handle(buf[i]) {
+		start = 0
+		ofs = 0
+		werr = nil
+		for i = 0; i < n; i++ {
+			output, herr := p.handle(buf[i])
+			if herr != nil {
+				return herr
+			}
+			if !output {
 				ofs++
 			} else {
 				if p.extraByte != 0 {
@@ -76,13 +90,6 @@ func (p *Parser) ParseBuffer(buf []byte, escapeHandler func(finalByte byte, inte
 				if ofs > 0 {
 					buf[i-ofs] = buf[i]
 				}
-			}
-			if p.escapeFlag {
-				if werr == nil {
-					_, werr = p.out.Write(buf[start : i-ofs+1])
-				}
-				start = i - ofs + 1
-				p.escapeFlag = false
 			}
 		}
 		if start <= n-ofs && werr == nil {
@@ -142,24 +149,22 @@ type parserState struct {
 	// happens
 	extraByte byte
 
-	// set to true when an escape sequence is parsed
-	escapeFlag bool
-
 	// will be called when an escape sequence is parsed
-	escapeHandler func(finalByte byte, intermediateBytes, parameterBytes []byte)
+	escapeHandler func(finalByte byte, intermediateBytes, parameterBytes []byte) error
 }
 
 // handle a byte and return whether the byte should go to output
-func (s *parserState) handle(b byte) bool {
+func (s *parserState) handle(b byte) (bool, error) {
 	previousByte := s.previousByte
 	s.previousByte = b
+	var handlerError error
 	switch s.state {
 	default: // readNormal
 		if b == escape || (s.utf8Escapes && b == 0xc2) {
 			s.state = readEscape
-			return false
+			return false, handlerError
 		}
-		return true
+		return true, handlerError
 	case readEscape:
 		if s.utf8Escapes && previousByte == 0xc2 {
 			if b >= 0x80 && b <= 0x9f {
@@ -169,15 +174,15 @@ func (s *parserState) handle(b byte) bool {
 				if s.hasParams(b - 0x40) {
 					s.state = readEscapeParams
 				} else {
-					s.handleEscape()
+					handlerError = s.handleEscape()
 					s.state = readNormal
 				}
-				return false
+				return false, handlerError
 			}
 
 			s.extraByte = previousByte
 			s.state = readNormal
-			return true
+			return true, handlerError
 		}
 		// intermediate or final byte
 		if b >= 0x20 && b <= 0x7e {
@@ -191,7 +196,7 @@ func (s *parserState) handle(b byte) bool {
 				if s.hasParams(b) {
 					s.state = readEscapeParams
 				} else {
-					s.handleEscape()
+					handlerError = s.handleEscape()
 					s.state = readNormal
 				}
 			}
@@ -200,7 +205,7 @@ func (s *parserState) handle(b byte) bool {
 			s.state = readNormal
 			s.seqBufI = 0
 		}
-		return false
+		return false, handlerError
 	case readEscapeParams:
 		var finalByte byte
 		if s.seqBufI > 0 {
@@ -217,18 +222,18 @@ func (s *parserState) handle(b byte) bool {
 					// invalid parameters
 					s.state = readNormal
 					s.seqBufI = 0
-					return false
+					return false, handlerError
 				}
 			} else if previousByte >= 0x20 && previousByte <= 0x2f {
 				if !((b >= 0x20 && b <= 0x2f) || (b >= 0x40 && b <= 0x7e)) {
 					// invalid parameters
 					s.state = readNormal
 					s.seqBufI = 0
-					return false
+					return false, handlerError
 				}
 			}
 			if b >= 0x40 && b <= 0x7e {
-				s.handleEscape()
+				handlerError = s.handleEscape()
 				s.state = readNormal
 			}
 		default: // ST-terminated
@@ -239,12 +244,12 @@ func (s *parserState) handle(b byte) bool {
 				// allow xterm BEL-terminated OSC
 				(finalByte == ']' && b == '\x07') {
 
-				s.handleEscape()
+				handlerError = s.handleEscape()
 				s.state = readNormal
 				s.seqBufI = 0
 			}
 		}
-		return false
+		return false, handlerError
 	}
 }
 
@@ -257,17 +262,16 @@ func (s *parserState) hasParams(b byte) bool {
 	}
 }
 
-func (s *parserState) handleEscape() {
+func (s *parserState) handleEscape() error {
 	// seqBuf contains the escape sequence with \x1b, any intermediate bytes,
 	// and the final byte
 	// paramsBuf contains parameter bytes for e.g. CSI
-	s.escapeFlag = true
 	seqBufI := s.seqBufI
 	s.seqBufI = 0
 	paramsBufI := s.paramsBufI
 	s.paramsBufI = 0
 	if s.escapeHandler == nil {
-		return
+		return nil
 	}
 	var finalByte byte
 	if seqBufI > 0 {
@@ -281,5 +285,5 @@ func (s *parserState) handleEscape() {
 	if paramsBufI > 0 {
 		parameterBytes = s.paramsBuf[:paramsBufI]
 	}
-	s.escapeHandler(finalByte, intermediateBytes, parameterBytes)
+	return s.escapeHandler(finalByte, intermediateBytes, parameterBytes)
 }

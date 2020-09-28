@@ -216,15 +216,16 @@ func TestParser(t *testing.T) {
 			w := new(strings.Builder)
 			var ei int
 			p := ansihtml.NewParser(rd, w)
-			handler := func(finalByte byte, intermediateBytes []byte, parameterBytes []byte) {
+			handler := func(finalByte byte, intermediateBytes []byte, parameterBytes []byte) error {
 				if !assert.Less(t, ei, len(tC.escapes), "too many escapes") {
-					return
+					return nil
 				}
 				e := tC.escapes[ei]
 				ei++
 				assert.Equal(t, e.finalByte, finalByte, "finalByte")
 				assert.Equal(t, e.intermediateBytes, intermediateBytes, "intermediateBytes")
 				assert.Equal(t, e.parameterBytes, parameterBytes, "parameterBytes")
+				return nil
 			}
 			var err error
 			if tC.bufferSize == 0 {

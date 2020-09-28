@@ -7,5 +7,9 @@
 ## Usage
 
 ```go
-// TBD
+html := ansihtml.ConvertToHTML([]byte("\x1b[33mThis text is yellow.\x1b[m"))
+// html: `<span style="color:olive;">This text is yellow.</span>`
+
+html := ansihtml.ConvertToHTMLWithClasses([]byte("\x1b[31mThis text is red."), "ansi-", false)
+// html: `<span class="ansi-fg-red">This text is red.</span>`
 ```
