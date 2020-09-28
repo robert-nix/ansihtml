@@ -303,10 +303,6 @@ func (w *htmlWriter) writeSpanOpen() error {
 		if w.underlineColor.changed && !w.underlineColor.is24Bit && w.underlineColor.index <= 15 {
 			classes = append(classes, p+"underline-"+colorClassNames[w.underlineColor.index])
 		}
-
-		if len(classes) > 0 {
-			spanOpen += " class=\"" + strings.Join(classes, " ") + "\""
-		}
 	} else {
 		if w.bold {
 			styles = append(styles, p+"font-weight:bold")
@@ -369,6 +365,13 @@ func (w *htmlWriter) writeSpanOpen() error {
 		}
 	}
 
+	if len(classes) == 0 && len(styles) == 0 {
+		return nil
+	}
+
+	if len(classes) > 0 {
+		spanOpen += " class=\"" + strings.Join(classes, " ") + "\""
+	}
 	if len(styles) > 0 {
 		spanOpen += " style=\"" + strings.Join(styles, ";") + ";\""
 	}
