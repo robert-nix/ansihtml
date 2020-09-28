@@ -98,7 +98,7 @@ func TestConvertToHTML(t *testing.T) {
 		},
 		{
 			desc:   "integer overflow saturates",
-			input:  "\x1b[30;48;2;9999999999;9999999999;9999999999mThis is black on white",
+			input:  "\x1b[30;48;2;9999999997;9999999998;9999999999mThis is black on white",
 			output: `<span style="color:black;background-color:rgb(255,255,255);">This is black on white</span>`,
 		},
 		{

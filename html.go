@@ -172,8 +172,9 @@ func (w *htmlWriter) handleEscape(finalByte byte, intermediateBytes, parameterBy
 			// saturate to LONG_MAX
 			if param >= 214748365 || (param == 214748364 && b >= '8') {
 				param = 2147483647
+			} else {
+				param = param*10 + int(b-'0')
 			}
-			param = param*10 + int(b-'0')
 		} else if b == 'm' {
 			w.applyEffect(param)
 			break
