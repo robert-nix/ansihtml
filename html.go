@@ -234,7 +234,7 @@ var colorStyles = []string{
 	"olive",
 	"rebeccapurple",
 	"darkmagenta",
-	"darkturqoise",
+	"darkturquoise",
 	"lightsteelblue",
 	"gray",
 	"orangered",
@@ -242,7 +242,7 @@ var colorStyles = []string{
 	"gold",
 	"royalblue",
 	"orchid",
-	"turqoise",
+	"turquoise",
 	"white",
 }
 
